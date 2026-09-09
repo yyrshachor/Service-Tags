@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>Service Tags</title>
+
+<!-- iOS home-screen app behavior -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Tags" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#EDE8DE" />
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232B2A28'/%3E%3Ccircle cx='30' cy='30' r='7' fill='none' stroke='%23EDE8DE' stroke-width='4'/%3E%3Cpath d='M20 55 L80 55 M20 68 L65 68 M20 81 L50 81' stroke='%23EDE8DE' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E" />
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+
+<style>
+  :root {
+    --paper: #EDE8DE;
+    --card: #F7F4EC;
+    --ink: #2B2A28;
+    --ink-faint: #8A8477;
+    --border: #D8D0BF;
+    --overdue: #B8563C;
+    --soon: #C2903F;
+    --fresh: #6B7B5E;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    overscroll-behavior-y: none;
+  }
+  body {
+    padding: max(20px, env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom));
+    min-height: 100vh;
+  }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 22px;
+  }
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faint);
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+  }
+  h1 { font-size: 26px; font-weight: 600; margin: 0; letter-spacing: -0.3px; }
+  #addBtn {
+    width: 40px; height: 40px;
+    border-radius: 4px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: 12px;
+  }
+
+  .empty {
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    padding: 40px 24px;
+    text-align: center;
+    margin-top: 30px;
+  }
+  .empty-title { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+  .empty-body { font-size: 14px; color: var(--ink-faint); line-height: 1.5; max-width: 320px; margin: 0 auto 20px; }
+  .empty-btn {
+    background: var(--ink); color: var(--paper); border: none; border-radius: 4px;
+    padding: 10px 18px; font-size: 14px; font-weight: 500; cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .tag {
+    position: relative;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .tag .grommet {
+    position: absolute; top: 10px; left: 10px;
+    width: 7px; height: 7px; border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--paper);
+  }
+  .edit-handle {
+    position: absolute; top: 0; right: 0;
+    width: 34px; height: 34px;
+    background: transparent; border: none; cursor: pointer;
+    color: var(--ink-faint);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .tag-main {
+    width: 100%;
+    background: transparent; border: none;
+    padding: 26px 14px 14px;
+    display: flex; flex-direction: column; align-items: center;
+    cursor: pointer; text-align: center;
+    font-family: inherit;
+  }
+  .tag-icon { font-size: 24px; margin-bottom: 8px; }
+  .tag-name { font-size: 13.5px; font-weight: 600; margin-bottom: 10px; word-break: break-word; }
+  .counter-row { display: flex; align-items: baseline; gap: 4px; min-height: 28px; justify-content: center; }
+  .counter-big { font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 600; }
+  .counter-small { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink-faint); }
+  .counter-never { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--ink-faint); }
+  .logged-flash { display: flex; align-items: center; gap: 4px; color: var(--fresh); font-size: 13px; font-weight: 600; }
+  .subline { font-size: 10.5px; color: var(--ink-faint); margin-top: 8px; }
+
+  .add-tile {
+    border: 1px dashed var(--border);
+    border-radius: 3px;
+    background: transparent;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px;
+    min-height: 150px;
+    color: var(--ink-faint);
+    font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .add-tile .plus { font-size: 22px; }
+
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(43,42,40,0.4);
+    display: none;
+    align-items: flex-end; justify-content: center;
+    z-index: 50;
+  }
+  .overlay.open { display: flex; }
+  .sheet {
+    background: var(--paper);
+    border-radius: 10px 10px 0 0;
+    padding: 18px 18px calc(24px + env(safe-area-inset-bottom));
+    width: 100%; max-width: 420px;
+    box-sizing: border-box;
+  }
+  .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .sheet-title { font-size: 17px; font-weight: 600; }
+  .close-btn { background: transparent; border: none; cursor: pointer; color: var(--ink-faint); font-size: 20px; padding: 4px; }
+  label { display: block; font-size: 11.5px; color: var(--ink-faint); margin: 14px 0 6px; font-family: 'IBM Plex Mono', monospace; }
+  input[type=text], input[type=number] {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 4px;
+    padding: 10px 12px; font-size: 15px; font-family: 'Space Grotesk', sans-serif;
+    background: var(--card); color: var(--ink); outline: none;
+  }
+  #iconGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .icon-option {
+    aspect-ratio: 1; border: 1.5px solid var(--border); border-radius: 4px;
+    background: var(--card); display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 17px;
+  }
+  .icon-option.selected { background: var(--ink); border-color: var(--ink); filter: invert(1) hue-rotate(180deg); }
+  .sheet-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; }
+  .text-delete-btn { background: transparent; border: none; color: var(--overdue); font-size: 13.5px; cursor: pointer; font-family: inherit; padding: 8px 0; }
+  .save-btn {
+    background: var(--ink); color: var(--paper); border: none; border-radius: 4px;
+    padding: 11px 22px; font-size: 14.5px; font-weight: 500; cursor: pointer; font-family: inherit;
+  }
+  .save-btn:disabled { opacity: 0.4; }
+
+  .confirm-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .confirm-body { font-size: 13.5px; color: var(--ink-faint); line-height: 1.5; }
+  .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  .cancel-btn {
+    background: transparent; border: 1.5px solid var(--border); border-radius: 4px;
+    padding: 9px 16px; font-size: 13.5px; cursor: pointer; font-family: inherit;
+  }
+  .delete-btn {
+    background: var(--overdue); color: var(--paper); border: none; border-radius: 4px;
+    padding: 9px 16px; font-size: 13.5px; cursor: pointer; font-family: inherit;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="eyebrow">upkeep log</div>
+    <h1>Service Tags</h1>
+  </div>
+  <button id="addBtn" aria-label="Add tag">+</button>
+</header>
+
+<div id="grid"></div>
+<div id="emptyState" class="empty" style="display:none">
+  <div class="empty-title">Nothing on the board yet</div>
+  <div class="empty-body">Add a tag for something you service — an AC filter, a toothbrush, a water softener — and tap it each time you take care of it.</div>
+  <button class="empty-btn" id="emptyAddBtn">Add your first tag</button>
+</div>
+
+<!-- Edit / add sheet -->
+<div class="overlay" id="editOverlay">
+  <div class="sheet">
+    <div class="sheet-header">
+      <div class="sheet-title" id="sheetTitle">New tag</div>
+      <button class="close-btn" id="closeSheet" aria-label="Close">✕</button>
+    </div>
+    <label>Name</label>
+    <input type="text" id="nameInput" maxlength="30" placeholder="AC filter" />
+    <label>Icon</label>
+    <div id="iconGrid"></div>
+    <label>Remind every (weeks) — optional</label>
+    <input type="number" id="intervalInput" min="1" placeholder="e.g. 12" />
+    <div class="sheet-actions">
+      <button class="text-delete-btn" id="deleteBtn" style="display:none">Delete</button>
+      <span></span>
+      <button class="save-btn" id="saveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirm sheet -->
+<div class="overlay" id="confirmOverlay">
+  <div class="sheet">
+    <div class="confirm-title">Remove this tag?</div>
+    <div class="confirm-body">Its history will be deleted. This can't be undone.</div>
+    <div class="confirm-actions">
+      <button class="cancel-btn" id="cancelDelete">Keep it</button>
+      <button class="delete-btn" id="confirmDelete">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'maintenance-tags:v1';
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+const ICONS = {
+  Wind:'💨', Droplet:'💧', Filter:'🧯', Flame:'🔥', Battery:'🔋', Wrench:'🔧',
+  Car:'🚗', Home:'🏠', Lightbulb:'💡', Fan:'🌀', Fridge:'🧊', Shower:'🚿',
+  Bug:'🐛', Smile:'🦷', Scissors:'✂️', Heart:'❤️', Broom:'🧹', Plant:'🪴',
+  Sponge:'🧽', Trash:'🗑️', Bed:'🛏️'
+};
+
+let items = loadItems();
+let editingId = null; // null while adding new, id string while editing
+let pendingDeleteId = null;
+let selectedIcon = 'Wrench';
+
+function loadItems() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+function saveItems() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch {}
+}
+function uid() { return Math.random().toString(36).slice(2, 10); }
+
+function elapsedLabel(ts) {
+  if (!ts) return null;
+  const days = Math.floor((Date.now() - ts) / (24*60*60*1000));
+  if (days < 1) return { big: 'today', small: null };
+  if (days < 7) return { big: String(days), small: days === 1 ? 'day' : 'days' };
+  const wks = Math.floor(days / 7);
+  if (wks < 52) return { big: String(wks), small: wks === 1 ? 'wk' : 'wks' };
+  const months = Math.floor(days / 30.44);
+  return { big: String(months), small: months === 1 ? 'mo' : 'mos' };
+}
+function weeksSince(ts) { return Math.floor((Date.now() - ts) / WEEK_MS); }
+function statusColor(item) {
+  if (!item.lastDone || !item.intervalWeeks) return null;
+  const wks = weeksSince(item.lastDone);
+  if (wks >= item.intervalWeeks) return 'var(--overdue)';
+  if (wks >= item.intervalWeeks * 0.75) return 'var(--soon)';
+  return 'var(--fresh)';
+}
+function formatDate(ts) {
+  if (!ts) return 'never logged';
+  return new Date(ts).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+}
+
+function render() {
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('emptyState');
+  grid.innerHTML = '';
+
+  if (items.length === 0) {
+    empty.style.display = 'block';
+    grid.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  grid.style.display = 'grid';
+
+  items.forEach(item => {
+    const el = elapsedLabel(item.lastDone);
+    const borderColor = statusColor(item) || 'var(--border)';
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.style.borderColor = borderColor;
+
+    tag.innerHTML = `
+      <div class="grommet"></div>
+      <button class="edit-handle" aria-label="Edit ${item.name}">⋯</button>
+      <button class="tag-main">
+        <div class="tag-icon">${ICONS[item.icon] || '🔧'}</div>
+        <div class="tag-name">${escapeHtml(item.name)}</div>
+        <div class="counter-row" data-counter>
+          ${el
+            ? `<span class="counter-big">${el.big}</span>${el.small ? `<span class="counter-small">${el.small}</span>` : ''}`
+            : `<span class="counter-never">tap to start</span>`}
+        </div>
+        <div class="subline">${formatDate(item.lastDone)}${item.intervalWeeks ? ` · every ${item.intervalWeeks} wk` : ''}</div>
+      </button>
+    `;
+
+    tag.querySelector('.tag-main').addEventListener('click', () => logNow(item.id, tag));
+    tag.querySelector('.edit-handle').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openEdit(item);
+    });
+
+    grid.appendChild(tag);
+  });
+
+  const addTile = document.createElement('button');
+  addTile.className = 'add-tile';
+  addTile.innerHTML = `<span class="plus">+</span><span>New tag</span>`;
+  addTile.addEventListener('click', () => openEdit(null));
+  grid.appendChild(addTile);
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function logNow(id, tagEl) {
+  const item = items.find(i => i.id === id);
+  item.lastDone = Date.now();
+  saveItems();
+  const counter = tagEl.querySelector('[data-counter]');
+  counter.innerHTML = `<span class="logged-flash">✓ logged</span>`;
+  setTimeout(render, 900);
+}
+
+// ---- Edit sheet ----
+const editOverlay = document.getElementById('editOverlay');
+const nameInput = document.getElementById('nameInput');
+const intervalInput = document.getElementById('intervalInput');
+const iconGrid = document.getElementById('iconGrid');
+const sheetTitle = document.getElementById('sheetTitle');
+const deleteBtn = document.getElementById('deleteBtn');
+
+Object.keys(ICONS).forEach(name => {
+  const btn = document.createElement('button');
+  btn.className = 'icon-option';
+  btn.textContent = ICONS[name];
+  btn.dataset.icon = name;
+  btn.addEventListener('click', () => {
+    selectedIcon = name;
+    renderIconGrid();
+  });
+  iconGrid.appendChild(btn);
+});
+function renderIconGrid() {
+  [...iconGrid.children].forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.icon === selectedIcon);
+  });
+}
+
+function openEdit(item) {
+  editingId = item ? item.id : null;
+  sheetTitle.textContent = item ? 'Edit tag' : 'New tag';
+  nameInput.value = item ? item.name : '';
+  intervalInput.value = item && item.intervalWeeks ? item.intervalWeeks : '';
+  selectedIcon = item ? item.icon : 'Wrench';
+  deleteBtn.style.display = item ? 'block' : 'none';
+  renderIconGrid();
+  editOverlay.classList.add('open');
+  setTimeout(() => nameInput.focus(), 50);
+}
+function closeEdit() { editOverlay.classList.remove('open'); }
+
+document.getElementById('addBtn').addEventListener('click', () => openEdit(null));
+document.getElementById('emptyAddBtn').addEventListener('click', () => openEdit(null));
+document.getElementById('closeSheet').addEventListener('click', closeEdit);
+editOverlay.addEventListener('click', (e) => { if (e.target === editOverlay) closeEdit(); });
+
+document.getElementById('saveBtn').addEventListener('click', () => {
+  const name = nameInput.value.trim();
+  if (!name) return;
+  const intervalWeeks = intervalInput.value ? Math.max(1, parseInt(intervalInput.value, 10)) : null;
+
+  if (editingId) {
+    const item = items.find(i => i.id === editingId);
+    item.name = name;
+    item.icon = selectedIcon;
+    item.intervalWeeks = intervalWeeks;
+  } else {
+    items.push({ id: uid(), name, icon: selectedIcon, intervalWeeks, lastDone: null });
+  }
+  saveItems();
+  closeEdit();
+  render();
+});
+
+// ---- Delete confirm ----
+const confirmOverlay = document.getElementById('confirmOverlay');
+deleteBtn.addEventListener('click', () => {
+  pendingDeleteId = editingId;
+  confirmOverlay.classList.add('open');
+});
+document.getElementById('cancelDelete').addEventListener('click', () => {
+  confirmOverlay.classList.remove('open');
+});
+document.getElementById('confirmDelete').addEventListener('click', () => {
+  items = items.filter(i => i.id !== pendingDeleteId);
+  saveItems();
+  confirmOverlay.classList.remove('open');
+  closeEdit();
+  render();
+});
+
+// Re-render every minute so "today" flips to "1 day" etc. without a reload
+setInterval(render, 60000);
+
+render();
+</script>
+</body>
+</html>
